@@ -6,6 +6,11 @@ import styles from './styles.module.css';
 import { MenuItem, MermaidData, SourceCode, LLMAnalysis } from './types';
 import mermaid from "mermaid";
 import Split from 'react-split';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
+import php from 'react-syntax-highlighter/dist/esm/languages/prism/php';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
+SyntaxHighlighter.registerLanguage('php', php);
 
 
 const MainDashboard: React.FC = () => {
@@ -41,23 +46,23 @@ const MainDashboard: React.FC = () => {
   const resizingRef = useRef<'left' | 'right' | null>(null);
 
   // 响应式折叠逻辑
-useEffect(() => {
-  const handleResize = () => {
-    // 当宽度小于 1024 时自动折叠，否则展开
-    if (window.innerWidth < 1024) {
-      setSidebarCollapsed(true);
-    } else {
-      setSidebarCollapsed(false);
-    }
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      // 当宽度小于 1024 时自动折叠，否则展开
+      if (window.innerWidth < 1024) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+      }
+    };
 
-  // 初始化执行一次
-  handleResize();
+    // 初始化执行一次
+    handleResize();
 
-  // 绑定事件
-  window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
-}, []); // ✅ 注意：依赖数组为空，只执行一次
+    // 绑定事件
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []); // ✅ 注意：依赖数组为空，只执行一次
 
   const startLeftResize = (e: React.MouseEvent) => {
     resizingRef.current = 'left';
@@ -864,17 +869,18 @@ useEffect(() => {
               </button>
             </div>
             <div className="p-4 flex-1 overflow-auto">
-              <div
-                className={`${styles.codePanel} rounded-lg p-4  overflow-auto ${styles.scrollbarMinimal} h-full`}
-              >
+              <div className="rounded-lg p-4 overflow-auto h-full bg-gray-900">
                 {code ? (
-                  <pre>
-                    <code className="language-php text-xs whitespace-pre-wrap">
-                      {code}
-                    </code>
-                  </pre>
+                  <SyntaxHighlighter
+                    language="php"
+                    style={oneDark}
+                    wrapLines={true}
+                    customStyle={{ fontSize: '0.75rem', margin: 0 }}
+                  >
+                    {code}
+                  </SyntaxHighlighter>
                 ) : (
-                  <div className="text-xs text-text-secondary text-center mt-8">
+                  <div className="text-xs text-gray-400 text-center mt-8">
                     搜索函数查看代码
                   </div>
                 )}
