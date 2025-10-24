@@ -114,3 +114,28 @@
   -webkit-user-select: none;
 }
 
+.mermaidContainer {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.mermaid-container svg {
+  max-width: none !important; /* 避免自动缩放 */
+  max-height: none !important;
+}
+
+.scrollbarMinimal::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbarMinimal::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 3px;
+}
+
+.scrollbarMinimal::-webkit-scrollbar-track {
+  background: transparent;
+}
+

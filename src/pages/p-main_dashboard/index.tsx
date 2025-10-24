@@ -31,9 +31,62 @@ const MainDashboard: React.FC = () => {
   const [analysis, setAnalysis] = useState<string>("");
 
   // Refs
+  const containerRef = useRef<HTMLDivElement>(null);
   const mermaidContainerRef = useRef<HTMLDivElement>(null);
   const mermaidDiagramRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const [leftWidth, setLeftWidth] = useState(300); // 默认左侧宽
+  const [rightWidth, setRightWidth] = useState(320); // 默认右侧宽
+  const resizingRef = useRef<'left' | 'right' | null>(null);
+
+  // 响应式折叠逻辑
+useEffect(() => {
+  const handleResize = () => {
+    // 当宽度小于 1024 时自动折叠，否则展开
+    if (window.innerWidth < 1024) {
+      setSidebarCollapsed(true);
+    } else {
+      setSidebarCollapsed(false);
+    }
+  };
+
+  // 初始化执行一次
+  handleResize();
+
+  // 绑定事件
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []); // ✅ 注意：依赖数组为空，只执行一次
+
+  const startLeftResize = (e: React.MouseEvent) => {
+    resizingRef.current = 'left';
+    e.preventDefault();
+  };
+
+  const startRightResize = (e: React.MouseEvent) => {
+    resizingRef.current = 'right';
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      if (resizingRef.current === 'left') {
+        setLeftWidth(Math.max(200, e.clientX)); // 最小200px
+      } else if (resizingRef.current === 'right' && containerRef.current) {
+        const newWidth = window.innerWidth - e.clientX;
+        setRightWidth(Math.max(200, newWidth));
+      }
+    };
+    const handleMouseUp = () => { resizingRef.current = null; };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
 
 
@@ -128,23 +181,75 @@ const MainDashboard: React.FC = () => {
   const mockMermaidData: MermaidData = {
     'UserService.getUser': `
       sequenceDiagram
-        participant Client
-        participant API Gateway
-        participant UserService
-        participant Database
-        participant AuthService
-        participant OrderService
-        
-        Client->>API Gateway: GET /users/{id}
-        API Gateway->>UserService: getUser(userId)
-        UserService->>AuthService: validateToken(token)
-        AuthService-->>UserService: tokenValid
-        UserService->>Database: queryUser(userId)
-        Database-->>UserService: userData
-        UserService->>OrderService: getUserOrders(userId)
-        OrderService-->>UserService: userOrders
-        UserService-->>API Gateway: userResponse
-        API Gateway-->>Client: 200 OK + userData
+    participant Controller as Border::newOrdersAction
+    Controller->>ShopModel: formatShopIdListAndAuth()
+    Controller->>ShopModel: getShopListByOrderConfirmMethod()
+    ShopModel->>ShopModel: getShopOrderConfirmMethod()
+    ShopModel->>ShopModel: getShopBaseInfoChunkBySize()
+    ShopModel->>ShopModel: getShopBaseInfoByIDs()
+    ShopModel->>ShopModel: getShopCommonInfo()
+    Controller->>TradeModel: setRequestSourceVersion()
+    Controller->>ShopModel: getShopInfoAndFilterByAttribute()
+    ShopModel->>ShopModel: getShopBaseInfoByIDs()
+    ShopModel->>ShopModel: getShopCommonInfo()
+    ShopModel->>ShopExtModel: filterShopByGrayAndBAppBackupValue()
+    ShopExtModel->>Apollo: getOpenapiBAppBackupGray()
+    Apollo->>Apollo: getApolloConfig()
+    Controller->>ShopModel: isHitMixedDeliveryGray()
+    Controller->>OrderBaseModel: getNewAndHighLightOrderByShopIDs()
+    OrderBaseModel->>OrderDataModel: getNewOrders()
+    OrderDataModel->>OrderDataModel: _formatUnfinishedListParams()
+    OrderDataModel->>OrderDataModel: _unfinishedOrderList()
+    OrderDataModel->>Order: getUnfinishedOrderList()
+    OrderDataModel->>Apollo: getApolloConfig()
+    OrderBaseModel->>OrderDataModel: getNewHightLightOrders()
+    OrderDataModel->>Apollo: getApolloConfig()
+    OrderDataModel->>OrderDataModel: _formatUnfinishedListParams()
+    OrderDataModel->>OrderDataModel: _unfinishedOrderList()
+    OrderDataModel->>Order: getUnfinishedOrderList()
+    OrderDataModel->>Apollo: getApolloConfig()
+    OrderBaseModel->>OrderTicketModel: needPrintTicket()
+    OrderTicketModel->>OrderBaseModel: isNotCanceledByShop()
+    OrderBaseModel->>OrderItemModel: convertOrderItemList()
+    OrderItemModel->>ItemModel: getItemListByItemIds()
+    ItemModel->>ClientModel: getItemClient()
+    OrderItemModel->>CurrencyConvertor: getCurrencyEntity()
+    CurrencyConvertor->>CurrencyConvertor: getCurrencySymbol()
+    CurrencyConvertor->>CurrencyConvertor: formatCents2Yuan()
+    OrderBaseModel->>Constant: getDisplayStatusText()
+    OrderBaseModel->>Constant: getActions()
+    OrderBaseModel->>OrderBaseModel: getDisplayInfo()
+    OrderBaseModel->>OrderBaseModel: _convertInfoByDisplayStatus()
+    OrderBaseModel->>OrderBaseModel: getDisplayStatusByOrderStatus()
+    OrderBaseModel->>OrderBaseModel: _isShowCountDown()
+    OrderBaseModel->>OrderBaseModel: getPreparedTime()
+    OrderBaseModel->>RedisService: getFusionClient()
+    OrderBaseModel->>OrderBaseModel: checkCancelApply()
+    OrderBaseModel->>OrderItemModel: convertOrderItemList()
+    OrderItemModel->>ItemModel: getItemListByItemIds()
+    ItemModel->>ClientModel: getItemClient()
+    OrderItemModel->>CurrencyConvertor: getCurrencyEntity()
+    CurrencyConvertor->>CurrencyConvertor: getCurrencySymbol()
+    CurrencyConvertor->>CurrencyConvertor: formatCents2Yuan()
+    OrderBaseModel->>OrderBaseModel: _convertInfoBySubStatus()
+    OrderBaseModel->>OrderBaseModel: checkCancelApply()
+    OrderBaseModel->>OrderBaseModel: _convertInfoByDeliveryType()
+    OrderBaseModel->>OrderBaseModel: checkCancelApply()
+    OrderBaseModel->>OrderBaseModel: getPreparedTime()
+    OrderBaseModel->>RedisService: getFusionClient()
+    OrderBaseModel->>OrderBaseModel: _convertInfoByReminder()
+    OrderBaseModel->>OrderBaseModel: setBETA4NewOrders()
+    OrderBaseModel->>OrderBaseModel: getBETATimeMap()
+    OrderBaseModel->>ShopModel: mayUseBETATimeOrderByShopInfo()
+    ShopModel->>ShopModel: inBetaWhiteListByShopInfo()
+    ShopModel->>Apollo: getAllApolloInfo()
+    OrderBaseModel->>ShopModel: batchGetShopETATime()
+    ShopModel->>ShopModel: packageBatchData()
+    ShopModel->>Forecastor: batchGetShopETA()
+    Forecastor->>Forecastor: _getClient()
+    OrderBaseModel->>OrderBaseModel: getMealTimeStatus()
+    Controller->>ShopModel: getDefaultTtsConf()
+    Controller->>ShopModel: ttsConfFilter()
     `,
     'OrderService.createOrder': `
       sequenceDiagram
@@ -306,17 +411,7 @@ const MainDashboard: React.FC = () => {
     return () => { document.title = originalTitle; };
   }, []);
 
-  // 响应式处理
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 1024 && !sidebarCollapsed) {
-        setSidebarCollapsed(true);
-      }
-    };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarCollapsed]);
 
   // 初始化 Mermaid
   useEffect(() => {
@@ -344,7 +439,7 @@ const MainDashboard: React.FC = () => {
         // 可选：调整样式或高亮
         const svgElement = mermaidDiagramRef.current.querySelector("svg");
         if (svgElement) {
-          svgElement.style.width = "100%";
+          svgElement.style.width = "500%";
           svgElement.style.height = "auto";
         }
 
@@ -384,15 +479,31 @@ const MainDashboard: React.FC = () => {
 
   // 处理Mermaid图缩放
   const handleZoomIn = () => {
-    setMermaidScale(prevScale => Math.min(prevScale + 0.1, 2));
+    setMermaidScale((s) => s + 1);
   };
 
   const handleZoomOut = () => {
-    setMermaidScale(prevScale => Math.max(prevScale - 0.1, 0.5));
+    if (!containerRef.current || !mermaidDiagramRef.current) return;
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const containerHeight = containerRef.current.offsetHeight;
+    const contentWidth = mermaidDiagramRef.current.scrollWidth;
+    const contentHeight = mermaidDiagramRef.current.scrollHeight;
+
+    const minScale = Math.min(containerWidth / contentWidth, containerHeight / contentHeight, 1);
+    setMermaidScale((s) => Math.max(s - 0.1, minScale));
   };
 
   const handleZoomReset = () => {
-    setMermaidScale(1);
+    if (!containerRef.current || !mermaidDiagramRef.current) return;
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const containerHeight = containerRef.current.offsetHeight;
+    const contentWidth = mermaidDiagramRef.current.scrollWidth;
+    const contentHeight = mermaidDiagramRef.current.scrollHeight;
+
+    const minScale = Math.min(containerWidth / contentWidth, containerHeight / contentHeight, 1);
+    setMermaidScale(minScale);
   };
 
   // 切换侧边栏
@@ -545,69 +656,76 @@ const MainDashboard: React.FC = () => {
       </header>
 
       {/* 主内容区域 */}
-      <div className="flex pt-16 min-h-screen">
+      <div className="flex pt-16 min-h-screen relative h-screen">
         {/* 左侧目录区 */}
-        <aside className={`${sidebarCollapsed ? styles.sidebarCollapsed : styles.sidebarExpanded} bg-white border-r border-border-light flex-shrink-0 transition-all duration-300`}>
-          {/* 侧边栏切换按钮 */}
-          <div className="p-2 border-b border-border-light">
-            <button
-              onClick={toggleSidebar}
-              className="w-full flex items-center justify-center p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
-            >
-              <i className="fas fa-bars text-sm"></i>
-            </button>
-          </div>
-
-          {/* 目录搜索框 */}
-          <div className="p-4 border-b border-border-light relative">
-            <div className="relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={sidebarSearchQuery}
-                onChange={handleSearchInputChange}
-                onFocus={() => setShowSearchSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-                placeholder="搜索函数、模块..."
-                className={`w-full pl-10 pr-4 py-2 border border-border-light rounded-lg ${styles.searchInputFocus} text-sm`}
-              />
-              <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary text-sm"></i>
+        <aside className={`${sidebarCollapsed ? styles.sidebarCollapsed : styles.sidebarExpanded} bg-white border-r border-border-light flex-shrink-0 transition-all duration-300 z-40`}>
+          <div
+            className="flex flex-col h-full"
+          >
+            {/* 侧边栏切换按钮 */}
+            <div className="p-2 border-b border-border-light">
+              <button
+                onClick={toggleSidebar}
+                className="w-full flex items-center justify-center p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
+              >
+                <i className="fas fa-bars text-sm"></i>
+              </button>
             </div>
 
-            {/* 搜索联想结果 */}
-            {showSearchSuggestions && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border-light rounded-lg shadow-card z-10">
-                <div className="p-2">
-                  <div className="px-3 py-2 text-sm text-text-secondary">搜索建议</div>
-                  <div className="space-y-1">
-                    {getSearchSuggestions(sidebarSearchQuery).map((func, index) => (
-                      <div
-                        key={index}
-                        className={`px-3 py-2 ${styles.menuItemHover} rounded cursor-pointer`}
-                        onClick={() => handleSuggestionClick(func)}
-                      >
-                        <i className="fas fa-code text-xs mr-2 text-text-secondary"></i>
-                        <span className="text-sm">{func}</span>
-                      </div>
-                    ))}
+            {/* 目录搜索框 */}
+            <div className="p-4 border-b border-border-light relative z-40">
+              <div className="relative z-40">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={sidebarSearchQuery}
+                  onChange={handleSearchInputChange}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onFocus={() => setShowSearchSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+                  placeholder="搜索函数、模块..."
+                  className={`w-full pl-10 pr-4 py-2 border border-border-light rounded-lg ${styles.searchInputFocus} text-sm`}
+                />
+                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary text-sm"></i>
+              </div>
+
+              {/* 搜索联想结果 */}
+              {showSearchSuggestions && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border-light rounded-lg shadow-card z-10">
+                  <div className="p-2">
+                    <div className="px-3 py-2 text-sm text-text-secondary">搜索建议</div>
+                    <div className="space-y-1">
+                      {getSearchSuggestions(sidebarSearchQuery).map((func, index) => (
+                        <div
+                          key={index}
+                          className={`px-3 py-2 ${styles.menuItemHover} rounded cursor-pointer`}
+                          onClick={() => handleSuggestionClick(func)}
+                        >
+                          <i className="fas fa-code text-xs mr-2 text-text-secondary"></i>
+                          <span className="text-sm">{func}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* 目录树 */}
-          <div className={`flex-1 overflow-y-auto ${styles.scrollbarMinimal}`}>
-            <div className="p-4">
-              {renderDirectoryTree()}
+            {/* 目录树 */}
+            <div className={`flex-1 overflow-y-auto 
+            ${styles.scrollbarMinimal}`}>
+              <div className="p-4">
+                {renderDirectoryTree()}
+              </div>
             </div>
           </div>
         </aside>
 
         {/* 中间 Mermaid 图展示区 */}
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col overflow-auto relative z=0" ref={containerRef} >
           {/* 页面头部 */}
-          <div className="bg-white border-b border-border-light px-6 py-4">
+          <div className="bg-white border-b border-border-light px-6 py-4 z-20 relative">
             <div className="flex items-center justify-between">
               {/* 面包屑导航 */}
               <nav className="flex items-center space-x-2 text-sm">
@@ -641,25 +759,31 @@ const MainDashboard: React.FC = () => {
           </div>
 
           {/* Mermaid 图 */}
-          <div className="flex-1 p-6">
+          <div className="flex-1 p-6 verflow-auto relative z=0">
             <div
-              ref={mermaidContainerRef}
-              className={`${styles.mermaidContainer} rounded-xl p-6 h-full`}
-            >
-              <div
-                ref={mermaidDiagramRef}
-                className={`h-full overflow-auto ${styles.scrollbarMinimal}`}
-                style={{ transform: `scale(${mermaidScale})` }}
-              ></div>
-            </div>
+              ref={mermaidDiagramRef}
+              className="mermaid-container"
+              style={{
+                transform: `scale(${mermaidScale})`,
+                transformOrigin: '0 0',
+                width: 'max-content',
+                height: 'max-content',
+                position: 'relative',
+                zIndex: 0,  // ✅ 重点1
+                pointerEvents: 'auto', // ✅ 保证图能点
+              }}
+            />
           </div>
         </main>
 
         {/* 右侧：代码与解析区 */}
-        <aside className="w-80 bg-white border-l border-border-light flex-shrink-0 hidden xl:block">
-          <div className="relative w-80 p-4">
+        <aside className="bg-white border-l border-border-light flex-shrink-0 hidden xl:flex flex-col h-full z-40 "
+          style={{ width: rightWidth }}
+          onMouseDown={startRightResize} // 拖拽逻辑
+        >
+          <div className="relative w-full p-4 z-40 flex-none">
             {/* 搜索框 */}
-            <div className="relative">
+            <div className="relative z-40">
               <input
                 type="text"
                 placeholder="搜索节点..."
@@ -669,6 +793,8 @@ const MainDashboard: React.FC = () => {
                   setSearchQuery(value);
                   setShowSuggestions(true);
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 onFocus={() => setShowSuggestions(true)}
                 className="w-full pl-10 pr-4 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
               />
@@ -722,13 +848,11 @@ const MainDashboard: React.FC = () => {
             )}
           </div>
 
-
-
           {/* 源代码展示 */}
-          <div className="border-b border-border-light">
-            <div className="flex items-center justify-between p-1 border-b border-border-light">
+          <div className="flex flex-col flex-1 border-b border-border-light overflow-hidden">
+            <div className="flex items-center justify-between p-1 border-b border-border-light flex-none">
               <h3 className="text-sm font-medium text-text-primary">
-                源代码（{selectedLabel}）
+                源代码
               </h3>
               <button
                 onClick={(e) =>
@@ -739,9 +863,9 @@ const MainDashboard: React.FC = () => {
                 <i className="fas fa-copy text-xs"></i>
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 flex-1 overflow-auto">
               <div
-                className={`${styles.codePanel} rounded-lg p-4 h-64 overflow-auto ${styles.scrollbarMinimal}`}
+                className={`${styles.codePanel} rounded-lg p-4  overflow-auto ${styles.scrollbarMinimal} h-full`}
               >
                 {code ? (
                   <pre>
@@ -751,7 +875,7 @@ const MainDashboard: React.FC = () => {
                   </pre>
                 ) : (
                   <div className="text-xs text-text-secondary text-center mt-8">
-                    👈 点击左侧节点或箭头查看代码
+                    搜索函数查看代码
                   </div>
                 )}
               </div>
@@ -759,8 +883,8 @@ const MainDashboard: React.FC = () => {
           </div>
 
           {/* 智能解析展示 */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between p-1 border-b border-border-light">
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex items-center justify-between p-1 border-b border-border-light flex-none">
               <h3 className="text-sm font-medium text-text-primary">智能解析</h3>
               <button
                 onClick={(e) =>
@@ -771,9 +895,9 @@ const MainDashboard: React.FC = () => {
                 <i className="fas fa-copy text-xs"></i>
               </button>
             </div>
-            <div className="p-4">
+            <div className="p-4 flex-1 overflow-auto">
               <div
-                className={`bg-gray-50 border border-border-light rounded-lg p-4 h-64 overflow-auto ${styles.scrollbarMinimal}`}
+                className={`bg-gray-50 border border-border-light rounded-lg p-4 overflow-auto ${styles.scrollbarMinimal} h-full`}
               >
                 {analysis ? (
                   <div
@@ -784,7 +908,7 @@ const MainDashboard: React.FC = () => {
                   </div>
                 ) : (
                   <div className="text-xs text-text-secondary text-center mt-8">
-                    👈 点击左侧节点或箭头查看智能解析
+                    搜索函数查看智能解析
                   </div>
                 )}
               </div>
