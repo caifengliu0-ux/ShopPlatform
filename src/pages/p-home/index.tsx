@@ -88,6 +88,7 @@ const HomePage: React.FC = () => {
             <div className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
               <i className="fas fa-robot text-white text-sm"></i>
             </div>
+            <span className="text-text-primary font-medium">商家OpenAI平台</span>
           </Link>
           
           {/* 全局搜索框 */}

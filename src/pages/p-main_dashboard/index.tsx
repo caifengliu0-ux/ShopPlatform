@@ -4,10 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './styles.module.css';
 import { MenuItem, MermaidData, SourceCode, LLMAnalysis } from './types';
+import mermaid from "mermaid";
+import Split from 'react-split';
+
 
 const MainDashboard: React.FC = () => {
   const navigate = useNavigate();
-  
+
   // 状态管理
   const [currentFunction, setCurrentFunction] = useState<string>('UserService.getUser');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
@@ -18,12 +21,22 @@ const MainDashboard: React.FC = () => {
   const [showCodeDrawer, setShowCodeDrawer] = useState<boolean>(false);
   const [isCodeLoading, setIsCodeLoading] = useState<boolean>(false);
   const [isAnalysisLoading, setIsAnalysisLoading] = useState<boolean>(false);
-  
+  const [selectedLabel, setSelectedLabel] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedNode, setExpandedNode] = useState<string | null>(null);
+  const [selectedFunction, setSelectedFunction] = useState<string | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [code, setCode] = useState<string>("");
+  const [analysis, setAnalysis] = useState<string>("");
+
   // Refs
   const mermaidContainerRef = useRef<HTMLDivElement>(null);
   const mermaidDiagramRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  
+
+
+
   // 模拟数据
   const mockMenuData: MenuItem[] = [
     {
@@ -105,6 +118,12 @@ const MainDashboard: React.FC = () => {
       ]
     }
   ];
+
+  // mock 函数对应节点
+  const mockNodeToFunctions: Record<string, string[]> = {
+    "Client": ["GET /users/{id}"],
+    "API Gateway": ["getUser(userId)"]
+  };
 
   const mockMermaidData: MermaidData = {
     'UserService.getUser': `
@@ -274,6 +293,12 @@ const MainDashboard: React.FC = () => {
     `
   };
 
+  const filteredNodes = searchQuery
+    ? Object.keys(mockNodeToFunctions).filter(node =>
+      node.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    : Object.keys(mockNodeToFunctions);
+
   // 设置页面标题
   useEffect(() => {
     const originalTitle = document.title;
@@ -293,17 +318,69 @@ const MainDashboard: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, [sidebarCollapsed]);
 
-  // 渲染Mermaid图
+  // 初始化 Mermaid
   useEffect(() => {
-    const renderMermaid = () => {
-      if (mermaidDiagramRef.current) {
-        const mermaidCode = mockMermaidData[currentFunction] || mockMermaidData['UserService.getUser'];
-        mermaidDiagramRef.current.innerHTML = `<pre class="whitespace-pre-wrap font-mono text-xs">${mermaidCode}</pre>`;
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: "default",
+    });
+  }, []);
+
+
+  // 渲染 Mermaid 图（不绑定点击事件）
+  useEffect(() => {
+    const renderMermaid = async () => {
+      if (!mermaidDiagramRef.current) return;
+
+      try {
+        const mermaidCode =
+          mockMermaidData[currentFunction] || mockMermaidData["UserService.getUser"];
+        if (!mermaidCode) return;
+
+        // 渲染成 SVG 字符串
+        const { svg } = await mermaid.render("diagram", mermaidCode);
+        mermaidDiagramRef.current.innerHTML = svg;
+
+        // 可选：调整样式或高亮
+        const svgElement = mermaidDiagramRef.current.querySelector("svg");
+        if (svgElement) {
+          svgElement.style.width = "100%";
+          svgElement.style.height = "auto";
+        }
+
+      } catch (err) {
+        console.error("Mermaid 渲染失败:", err);
       }
     };
 
     renderMermaid();
   }, [currentFunction]);
+
+
+
+  // 发送 API 请求函数
+  const fetchCodeAndExplanation = async (target: string) => {
+    try {
+      console.log("📡 正在请求节点信息：", target);
+
+      //const res = await fetch(`/api/getInfo?name=${encodeURIComponent(target)}`);
+      //const data = await res.json();
+      //console.log("✅ 收到数据：", data);
+      // 这里你可以用 modal、右侧面板、console.log 等展示内容
+      //alert(`节点：${target}\n\n代码：${data.code}\n\n解释：${data.explanation}`);
+
+      const code = mockSourceCode["UserService.getUser"];
+      const explanation = mockLLMAnalysis["UserService.getUser"];
+      setSelectedLabel(target);
+      setCode(code);
+      setAnalysis(explanation);
+      alert(`【${target}】\n\n代码:\n${code}\n\n说明:\n${explanation}`);
+
+    } catch (error) {
+      console.error("请求失败:", error);
+    }
+  };
+
 
   // 处理Mermaid图缩放
   const handleZoomIn = () => {
@@ -326,7 +403,7 @@ const MainDashboard: React.FC = () => {
   // 选择函数
   const selectFunction = (funcName: string) => {
     setCurrentFunction(funcName);
-    
+
     // 添加到最近访问
     setRecentFunctions(prev => {
       if (!prev.includes(funcName)) {
@@ -339,11 +416,11 @@ const MainDashboard: React.FC = () => {
 
   // 搜索建议
   const getSearchSuggestions = (query: string): string[] => {
-    const allFunctions = mockMenuData.flatMap(module => 
+    const allFunctions = mockMenuData.flatMap(module =>
       module.children?.map(func => func.name) || []
     );
-    
-    return allFunctions.filter(func => 
+
+    return allFunctions.filter(func =>
       func.toLowerCase().includes(query.toLowerCase())
     );
   };
@@ -352,7 +429,7 @@ const MainDashboard: React.FC = () => {
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSidebarSearchQuery(query);
-    
+
     if (query.length > 0) {
       setShowSearchSuggestions(true);
     } else {
@@ -390,7 +467,7 @@ const MainDashboard: React.FC = () => {
   const renderDirectoryTree = () => {
     const renderModule = (module: MenuItem) => (
       <div key={module.id} className="mb-2">
-        <div 
+        <div
           className={`flex items-center justify-between p-3 rounded-lg ${styles.menuItemHover} cursor-pointer`}
           onClick={() => {
             // 模块展开/折叠逻辑可以在这里实现
@@ -402,14 +479,13 @@ const MainDashboard: React.FC = () => {
           </div>
           <i className="fas fa-chevron-right text-xs text-text-secondary transform transition-transform"></i>
         </div>
-        
+
         <div className="ml-6 mt-1 space-y-1">
           {module.children?.map(func => (
             <div
               key={func.id}
-              className={`p-2 rounded-lg ${styles.menuItemHover} cursor-pointer ${
-                currentFunction === func.name ? 'bg-secondary text-white' : ''
-              }`}
+              className={`p-2 rounded-lg ${styles.menuItemHover} cursor-pointer ${currentFunction === func.name ? 'bg-secondary text-white' : ''
+                }`}
               onClick={() => selectFunction(func.name)}
             >
               <i className="fas fa-code text-xs mr-2 text-text-secondary"></i>
@@ -442,20 +518,20 @@ const MainDashboard: React.FC = () => {
             </div>
             <span className="text-text-primary font-medium">商家OpenAI平台</span>
           </Link>
-           
-          
+
+
           {/* 全局搜索框 */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <div className="relative w-full">
-              <input 
-                type="text" 
-                placeholder="搜索函数、模块..." 
+              <input
+                type="text"
+                placeholder="搜索函数、模块..."
                 className={`w-full pl-10 pr-4 py-2 border border-border-light rounded-lg ${styles.searchInputFocus} text-sm`}
               />
               <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary text-sm"></i>
             </div>
           </div>
-          
+
           {/* 用户操作区 */}
           <div className="flex items-center space-x-4">
             <button className="p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors">
@@ -474,30 +550,30 @@ const MainDashboard: React.FC = () => {
         <aside className={`${sidebarCollapsed ? styles.sidebarCollapsed : styles.sidebarExpanded} bg-white border-r border-border-light flex-shrink-0 transition-all duration-300`}>
           {/* 侧边栏切换按钮 */}
           <div className="p-2 border-b border-border-light">
-            <button 
+            <button
               onClick={toggleSidebar}
               className="w-full flex items-center justify-center p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
             >
               <i className="fas fa-bars text-sm"></i>
             </button>
           </div>
-          
+
           {/* 目录搜索框 */}
           <div className="p-4 border-b border-border-light relative">
             <div className="relative">
-              <input 
+              <input
                 ref={searchInputRef}
-                type="text" 
+                type="text"
                 value={sidebarSearchQuery}
                 onChange={handleSearchInputChange}
                 onFocus={() => setShowSearchSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-                placeholder="搜索函数、模块..." 
+                placeholder="搜索函数、模块..."
                 className={`w-full pl-10 pr-4 py-2 border border-border-light rounded-lg ${styles.searchInputFocus} text-sm`}
               />
               <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary text-sm"></i>
             </div>
-            
+
             {/* 搜索联想结果 */}
             {showSearchSuggestions && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border-light rounded-lg shadow-card z-10">
@@ -519,7 +595,7 @@ const MainDashboard: React.FC = () => {
               </div>
             )}
           </div>
-          
+
           {/* 目录树 */}
           <div className={`flex-1 overflow-y-auto ${styles.scrollbarMinimal}`}>
             <div className="p-4">
@@ -528,7 +604,7 @@ const MainDashboard: React.FC = () => {
           </div>
         </aside>
 
-        {/* 中间Mermaid图展示区 */}
+        {/* 中间 Mermaid 图展示区 */}
         <main className="flex-1 flex flex-col">
           {/* 页面头部 */}
           <div className="bg-white border-b border-border-light px-6 py-4">
@@ -539,134 +615,183 @@ const MainDashboard: React.FC = () => {
                 <i className="fas fa-chevron-right text-xs text-text-secondary"></i>
                 <span className="text-text-primary font-medium">{currentFunction}</span>
               </nav>
-              
-              {/* Mermaid图控制按钮 */}
+
+              {/* 控制按钮 */}
               <div className="flex items-center space-x-2">
-                <button 
+                <button
                   onClick={handleZoomOut}
                   className="p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
                 >
                   <i className="fas fa-search-minus text-sm"></i>
                 </button>
-                <button 
+                <button
                   onClick={handleZoomReset}
                   className="p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
                 >
                   <i className="fas fa-home text-sm"></i>
                 </button>
-                <button 
+                <button
                   onClick={handleZoomIn}
                   className="p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
                 >
                   <i className="fas fa-search-plus text-sm"></i>
                 </button>
-                <button 
-                  onClick={toggleCodeDrawer}
-                  className="p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors xl:hidden"
-                >
-                  <i className="fas fa-code text-sm"></i>
-                </button>
               </div>
             </div>
           </div>
-          
-          {/* Mermaid图展示区 */}
+
+          {/* Mermaid 图 */}
           <div className="flex-1 p-6">
-            <div ref={mermaidContainerRef} className={`${styles.mermaidContainer} rounded-xl p-6 h-full`}>
-              <div 
+            <div
+              ref={mermaidContainerRef}
+              className={`${styles.mermaidContainer} rounded-xl p-6 h-full`}
+            >
+              <div
                 ref={mermaidDiagramRef}
                 className={`h-full overflow-auto ${styles.scrollbarMinimal}`}
                 style={{ transform: `scale(${mermaidScale})` }}
-              >
-                {/* Mermaid图将动态生成 */}
-              </div>
+              ></div>
             </div>
           </div>
         </main>
 
-        {/* 右侧代码与解析区 */}
+        {/* 右侧：代码与解析区 */}
         <aside className="w-80 bg-white border-l border-border-light flex-shrink-0 hidden xl:block">
-          {/* 代码展示面板 */}
+          <div className="relative w-80 p-4">
+            {/* 搜索框 */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="搜索节点..."
+                value={searchQuery}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchQuery(value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                className="w-full pl-10 pr-4 py-2 border border-border-light rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+              />
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm"></i>
+            </div>
+
+            {/* 节点列表 */}
+            {showSuggestions && filteredNodes.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-border-light rounded-lg shadow-card z-10 max-h-64 overflow-auto">
+                <div className="p-2">
+                  <div className="px-3 py-2 text-sm text-text-secondary font-medium">搜索结果</div>
+                  <div className="space-y-1">
+                    {filteredNodes.map((node) => (
+                      <div
+                        key={node}
+                        onMouseEnter={() => setExpandedNode(node)}
+                        onMouseLeave={() => setExpandedNode(null)}
+                      >
+                        {/* 节点 */}
+                        <div className="px-3 py-2 cursor-pointer rounded hover:bg-blue-50 flex justify-between items-center text-sm font-medium">
+                          <span>{node}</span>
+                          <span className="text-xs text-gray-400">+</span>
+                        </div>
+
+                        {/* 展开函数 */}
+                        {expandedNode === node && (
+                          <div className="ml-2 space-y-1">
+                            {mockNodeToFunctions[node].map((func) => (
+                              <div
+                                key={func}
+                                className="px-3 py-2 cursor-pointer rounded hover:bg-blue-100 text-sm text-text-primary"
+                                onClick={() => {
+                                  setSelectedFunction(func);
+                                  setCode(mockSourceCode["UserService.getUser"]);
+                                  setAnalysis(mockLLMAnalysis["UserService.getUser"]);
+                                  setSearchQuery(func); // 点击后填充搜索框
+                                  setExpandedNode(null); // 收起展开
+                                  setShowSuggestions(false);
+                                }}
+                              >
+                                {func}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+
+
+          {/* 源代码展示 */}
           <div className="border-b border-border-light">
-            <div className="flex items-center justify-between p-4 border-b border-border-light">
-              <h3 className="text-sm font-medium text-text-primary">源代码</h3>
-              <button 
-                onClick={(e) => copyToClipboard(mockSourceCode[currentFunction] || mockSourceCode['UserService.getUser'], e.currentTarget)}
+            <div className="flex items-center justify-between p-1 border-b border-border-light">
+              <h3 className="text-sm font-medium text-text-primary">
+                源代码（{selectedLabel}）
+              </h3>
+              <button
+                onClick={(e) =>
+                  copyToClipboard(code || "", e.currentTarget)
+                }
                 className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
               >
                 <i className="fas fa-copy text-xs"></i>
               </button>
             </div>
             <div className="p-4">
-              <div className={`${styles.codePanel} rounded-lg p-4 h-64 overflow-auto ${styles.scrollbarMinimal}`}>
-                {isCodeLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className={styles.loadingSpinner}></div>
-                    <span className="ml-2 text-sm text-text-secondary">加载中...</span>
-                  </div>
-                ) : (
+              <div
+                className={`${styles.codePanel} rounded-lg p-4 h-64 overflow-auto ${styles.scrollbarMinimal}`}
+              >
+                {code ? (
                   <pre>
-                    <code className="language-php text-xs">
-                      {mockSourceCode[currentFunction] || mockSourceCode['UserService.getUser']}
+                    <code className="language-php text-xs whitespace-pre-wrap">
+                      {code}
                     </code>
                   </pre>
+                ) : (
+                  <div className="text-xs text-text-secondary text-center mt-8">
+                    👈 点击左侧节点或箭头查看代码
+                  </div>
                 )}
               </div>
             </div>
           </div>
-          
-          {/* LLM解析结果面板 */}
+
+          {/* 智能解析展示 */}
           <div className="flex-1">
-            <div className="flex items-center justify-between p-4 border-b border-border-light">
+            <div className="flex items-center justify-between p-1 border-b border-border-light">
               <h3 className="text-sm font-medium text-text-primary">智能解析</h3>
-              <button 
-                onClick={(e) => {
-                  const analysis = document.querySelector('#analysis-content')?.textContent || '';
-                  copyToClipboard(analysis, e.currentTarget);
-                }}
+              <button
+                onClick={(e) =>
+                  copyToClipboard(analysis || "", e.currentTarget)
+                }
                 className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
               >
                 <i className="fas fa-copy text-xs"></i>
               </button>
             </div>
             <div className="p-4">
-              <div className={`bg-gray-50 border border-border-light rounded-lg p-4 h-64 overflow-auto ${styles.scrollbarMinimal}`}>
-                {isAnalysisLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className={styles.loadingSpinner}></div>
-                    <span className="ml-2 text-sm text-text-secondary">AI解析中...</span>
+              <div
+                className={`bg-gray-50 border border-border-light rounded-lg p-4 h-64 overflow-auto ${styles.scrollbarMinimal}`}
+              >
+                {analysis ? (
+                  <div
+                    id="analysis-content"
+                    className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap"
+                  >
+                    {analysis}
                   </div>
                 ) : (
-                  <div id="analysis-content" className="text-sm text-text-primary space-y-3">
-                    <div>
-                      <h4 className="font-medium text-text-primary mb-1">功能概述</h4>
-                      <p className="text-text-secondary text-xs leading-relaxed">
-                        该方法用于根据用户ID获取用户信息，包含token验证、用户查询和DTO转换三个主要步骤。
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-text-primary mb-1">关键逻辑</h4>
-                      <ul className="text-text-secondary text-xs leading-relaxed space-y-1">
-                        <li>• 首先验证token的有效性</li>
-                        <li>• 从数据库查询用户信息</li>
-                        <li>• 处理用户不存在的异常</li>
-                        <li>• 将实体转换为DTO返回</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-text-primary mb-1">依赖服务</h4>
-                      <ul className="text-text-secondary text-xs leading-relaxed space-y-1">
-                        <li>• AuthService: 负责token验证</li>
-                        <li>• UserRepository: 数据库访问层</li>
-                        <li>• UserMapper: 实体-DTO转换</li>
-                      </ul>
-                    </div>
+                  <div className="text-xs text-text-secondary text-center mt-8">
+                    👈 点击左侧节点或箭头查看智能解析
                   </div>
                 )}
               </div>
             </div>
           </div>
         </aside>
+
       </div>
 
       {/* 代码解析抽屉（小屏幕模式） */}
@@ -676,21 +801,21 @@ const MainDashboard: React.FC = () => {
             {/* 抽屉头部 */}
             <div className="flex items-center justify-between p-4 border-b border-border-light">
               <h3 className="text-sm font-medium text-text-primary">代码解析</h3>
-              <button 
+              <button
                 onClick={toggleCodeDrawer}
                 className="p-2 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded-lg transition-colors"
               >
                 <i className="fas fa-times text-sm"></i>
               </button>
             </div>
-            
+
             {/* 抽屉内容 */}
             <div className="flex-1 overflow-y-auto">
               {/* 代码展示面板 */}
               <div className="border-b border-border-light">
                 <div className="flex items-center justify-between p-4 border-b border-border-light">
                   <h4 className="text-sm font-medium text-text-primary">源代码</h4>
-                  <button 
+                  <button
                     onClick={(e) => copyToClipboard(mockSourceCode[currentFunction] || mockSourceCode['UserService.getUser'], e.currentTarget)}
                     className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
                   >
@@ -707,12 +832,12 @@ const MainDashboard: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               {/* LLM解析结果面板 */}
               <div>
                 <div className="flex items-center justify-between p-4 border-b border-border-light">
                   <h4 className="text-sm font-medium text-text-primary">智能解析</h4>
-                  <button 
+                  <button
                     onClick={(e) => {
                       const analysis = document.querySelector('#drawer-analysis-content')?.textContent || '';
                       copyToClipboard(analysis, e.currentTarget);
