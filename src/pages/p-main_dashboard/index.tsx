@@ -5,7 +5,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import styles from './styles.module.css';
 import { MenuItem, MermaidData, SourceCode, LLMAnalysis } from './types';
 import mermaid from "mermaid";
-import Split from 'react-split';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import php from 'react-syntax-highlighter/dist/esm/languages/prism/php';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -907,11 +906,10 @@ const MainDashboard: React.FC = () => {
               >
                 {analysis ? (
                   <div
-                    id="analysis-content"
-                    className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap"
-                  >
-                    {analysis}
-                  </div>
+                    id="drawer-analysis-content"
+                    className="text-sm text-gray-1200 space-y-3"
+                    dangerouslySetInnerHTML={{ __html: analysis }}
+                  />
                 ) : (
                   <div className="text-xs text-text-secondary text-center mt-8">
                     搜索函数查看智能解析
@@ -977,25 +975,14 @@ const MainDashboard: React.FC = () => {
                     <i className="fas fa-copy text-xs"></i>
                   </button>
                 </div>
+
                 <div className="p-4">
                   <div className={`bg-gray-50 border border-border-light rounded-lg p-4 h-48 overflow-auto ${styles.scrollbarMinimal}`}>
-                    <div id="drawer-analysis-content" className="text-sm text-text-primary space-y-3">
-                      <div>
-                        <h5 className="font-medium text-text-primary mb-1">功能概述</h5>
-                        <p className="text-text-secondary text-xs leading-relaxed">
-                          该方法用于根据用户ID获取用户信息，包含token验证、用户查询和DTO转换三个主要步骤。
-                        </p>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-text-primary mb-1">关键逻辑</h5>
-                        <ul className="text-text-secondary text-xs leading-relaxed space-y-1">
-                          <li>• 首先验证token的有效性</li>
-                          <li>• 从数据库查询用户信息</li>
-                          <li>• 处理用户不存在的异常</li>
-                          <li>• 将实体转换为DTO返回</li>
-                        </ul>
-                      </div>
-                    </div>
+                    <div
+                      id="drawer-analysis-content"
+                      className="text-sm text-text-primary space-y-3"
+                      dangerouslySetInnerHTML={{ __html: mockLLMAnalysis["UserService.getUser"] }}
+                    />
                   </div>
                 </div>
               </div>
