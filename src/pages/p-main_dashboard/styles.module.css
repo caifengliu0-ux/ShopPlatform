@@ -1,0 +1,116 @@
+
+
+.pageWrapper {
+  background-color: #f9fafb;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+.mermaidContainer {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid rgba(55, 67, 106, 0.1);
+}
+
+.menuItemHover:hover {
+  background-color: rgba(55, 67, 106, 0.05);
+  color: rgba(8, 13, 30, 0.9);
+}
+
+.searchInputFocus:focus {
+  outline: none;
+  border-color: rgba(55, 67, 106, 0.38);
+  box-shadow: 0 0 0 2px rgba(55, 67, 106, 0.1);
+}
+
+.codePanel {
+  background: #fafafa;
+  border: 1px solid rgba(55, 67, 106, 0.1);
+  font-family: 'SF Mono', Monaco, 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+.mermaidNode:hover {
+  cursor: pointer;
+  fill: rgba(55, 67, 106, 0.1);
+}
+
+.scrollbarMinimal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbarMinimal::-webkit-scrollbar-track {
+  background: rgba(55, 67, 106, 0.05);
+}
+
+.scrollbarMinimal::-webkit-scrollbar-thumb {
+  background: rgba(55, 67, 106, 0.3);
+  border-radius: 3px;
+}
+
+.scrollbarMinimal::-webkit-scrollbar-thumb:hover {
+  background: rgba(55, 67, 106, 0.4);
+}
+
+.loadingSpinner {
+  border: 2px solid rgba(55, 67, 106, 0.1);
+  border-radius: 50%;
+  border-top: 2px solid rgba(55, 67, 106, 0.38);
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sidebarCollapsed {
+  width: 56px;
+}
+
+.sidebarExpanded {
+  width: 240px;
+}
+
+.drawerOverlay {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.codeDrawer {
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.codeDrawer.open {
+  transform: translateX(0);
+}
+
+.resizer {
+  background-color: rgba(55, 67, 106, 0.1);
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.resizer:hover {
+  background-color: rgba(55, 67, 106, 0.38);
+}
+
+.resizer.vertical {
+  width: 4px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.resizer.vertical::before {
+  content: "";
+  width: 1px;
+  height: 40px;
+  background-color: rgba(55, 67, 106, 0.38);
+}
+
+.resizing * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
