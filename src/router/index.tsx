@@ -7,6 +7,7 @@ import P_main_dashboard from '../pages/p-main_dashboard';
 import P_ai_qa from '../pages/p-ai_qa';
 import P_api_call from '../pages/p-api_call';
 import P_monitor_platform from '../pages/p-monitor_platform';
+import P_log_platform from '../pages/p-log_platform';
 import NotFoundPage from './NotFoundPage';
 import ErrorPage from './ErrorPage';
 
@@ -79,6 +80,15 @@ const router = createBrowserRouter([
     element: (
       <ErrorBoundary>
         <P_monitor_platform />
+      </ErrorBoundary>
+    ),
+    errorElement: <ErrorPage />,
+  },
+      {
+    path: '/log-platform',
+    element: (
+      <ErrorBoundary>
+        <P_log_platform />
       </ErrorBoundary>
     ),
     errorElement: <ErrorPage />,
